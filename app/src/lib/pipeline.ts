@@ -5,7 +5,7 @@ import { uploadVideo, analyzeVideo } from "./gemini";
 import { generateNewConcepts } from "./claude";
 import type { PipelineParams, PipelineProgress, Video, ActiveTask } from "./types";
 
-const VIDEO_CONCURRENCY = 3;
+const VIDEO_CONCURRENCY = 1;
 
 interface ScrapedVideo {
   videoUrl: string;

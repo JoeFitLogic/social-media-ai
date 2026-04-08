@@ -68,7 +68,6 @@ export async function scrapeReels(
 export async function scrapeCreatorStats(username: string): Promise<CreatorStats> {
   const token = getToken();
 
-  // 1. Get profile info (details mode)
   const profileRes = await fetch(
     `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${token}`,
     {
@@ -89,46 +88,11 @@ export async function scrapeCreatorStats(username: string): Promise<CreatorStats
 
   const profileData = await profileRes.json() as ApifyProfileResult[];
   const profile = profileData[0] || {};
-  const profilePicUrl = profile.profilePicUrl || "";
-  const followers = profile.followersCount || 0;
 
-  // 2. Get recent posts (last 30 days) to compute activity metrics
-  const sinceDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
-
-  const postsRes = await fetch(
-    `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${token}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        directUrls: [`https://www.instagram.com/${username}/`],
-        resultsType: "posts",
-        resultsLimit: 100,
-        onlyPostsNewerThan: sinceDate,
-        addParentData: false,
-      }),
-    }
-  );
-
-  if (!postsRes.ok) {
-    const text = await postsRes.text();
-    throw new Error(`Apify posts error ${postsRes.status}: ${text}`);
-  }
-
-  const posts = await postsRes.json() as ApifyReel[];
-
-  // Filter to only video posts within 30 days
-  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const recentReels = posts.filter(
-    (p) => p.videoUrl && p.timestamp && new Date(p.timestamp) >= cutoff
-  );
-
-  const reelsCount30d = recentReels.length;
-  const avgViews30d = reelsCount30d > 0
-    ? Math.round(recentReels.reduce((sum, r) => sum + (r.videoPlayCount || 0), 0) / reelsCount30d)
-    : 0;
-
-  return { profilePicUrl, followers, reelsCount30d, avgViews30d };
+  return {
+    profilePicUrl: profile.profilePicUrl || "",
+    followers: profile.followersCount || 0,
+    reelsCount30d: 0,
+    avgViews30d: 0,
+  };
 }
