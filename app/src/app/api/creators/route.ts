@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { v4 as uuid } from "uuid";
 import { getCreators, insertCreator, updateCreator, deleteCreator } from "@/lib/db";
-import { scrapeCreatorStats } from "@/lib/apify";
 import type { Creator } from "@/lib/types";
 
 export async function GET(request: Request) {
@@ -25,24 +24,8 @@ export async function POST(request: Request) {
     lastScrapedAt: "",
   };
 
-  await insertCreator(newCreator);
-
-  try {
-    const stats = await scrapeCreatorStats(body.username);
-    const updated = await updateCreator({
-      ...newCreator,
-      profilePicUrl: stats.profilePicUrl,
-      followers: stats.followers,
-      reelsCount30d: stats.reelsCount30d,
-      avgViews30d: stats.avgViews30d,
-      lastScrapedAt: new Date().toISOString(),
-    });
-    return NextResponse.json(updated, { status: 201 });
-  } catch (err) {
-    console.error(`Failed to scrape stats for @${body.username}:`, err);
-  }
-
-  return NextResponse.json(newCreator, { status: 201 });
+  const created = await insertCreator(newCreator);
+  return NextResponse.json(created, { status: 201 });
 }
 
 export async function PUT(request: Request) {
