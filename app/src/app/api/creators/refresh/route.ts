@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readCreators, writeCreators } from "@/lib/csv";
+import { getCreators, updateCreator } from "@/lib/db";
 import { scrapeCreatorStats } from "@/lib/apify";
 
 export const maxDuration = 300;
@@ -8,10 +8,10 @@ export async function POST(request: Request) {
   const body = await request.json();
   const ids: string[] = body.ids || [];
 
-  const creators = readCreators();
+  const allCreators = await getCreators();
   const toRefresh = ids.length > 0
-    ? creators.filter((c) => ids.includes(c.id))
-    : creators;
+    ? allCreators.filter((c) => ids.includes(c.id))
+    : allCreators;
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -23,19 +23,14 @@ export async function POST(request: Request) {
           );
 
           const stats = await scrapeCreatorStats(creator.username);
-          const current = readCreators();
-          const idx = current.findIndex((c) => c.id === creator.id);
-          if (idx !== -1) {
-            current[idx] = {
-              ...current[idx],
-              profilePicUrl: stats.profilePicUrl,
-              followers: stats.followers,
-              reelsCount30d: stats.reelsCount30d,
-              avgViews30d: stats.avgViews30d,
-              lastScrapedAt: new Date().toISOString(),
-            };
-            writeCreators(current);
-          }
+          await updateCreator({
+            ...creator,
+            profilePicUrl: stats.profilePicUrl,
+            followers: stats.followers,
+            reelsCount30d: stats.reelsCount30d,
+            avgViews30d: stats.avgViews30d,
+            lastScrapedAt: new Date().toISOString(),
+          });
 
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ type: "progress", username: creator.username, status: "done", stats })}\n\n`)
