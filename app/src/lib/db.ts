@@ -12,13 +12,13 @@ function getSupabase() {
 
 export async function getConfigs(): Promise<Config[]> {
   const { data, error } = await getSupabase().from("configs").select("*");
-  if (error) throw error;
+  if (error) throw new Error(error.message ?? JSON.stringify(error));
   return data as Config[];
 }
 
 export async function insertConfig(config: Config): Promise<Config> {
   const { data, error } = await getSupabase().from("configs").insert(config).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message ?? JSON.stringify(error));
   return data as Config;
 }
 
@@ -29,13 +29,13 @@ export async function updateConfig(config: Config): Promise<Config> {
     .eq("id", config.id)
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(error.message ?? JSON.stringify(error));
   return data as Config;
 }
 
 export async function deleteConfig(id: string): Promise<void> {
   const { error } = await getSupabase().from("configs").delete().eq("id", id);
-  if (error) throw error;
+  if (error) throw new Error(error.message ?? JSON.stringify(error));
 }
 
 // ── Creators ─────────────────────────────────────────────────────────────────
@@ -44,13 +44,13 @@ export async function getCreators(category?: string): Promise<Creator[]> {
   let query = getSupabase().from("creators").select("*");
   if (category) query = query.eq("category", category);
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) throw new Error(error.message ?? JSON.stringify(error));
   return data as Creator[];
 }
 
 export async function insertCreator(creator: Creator): Promise<Creator> {
   const { data, error } = await getSupabase().from("creators").insert(creator).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message ?? JSON.stringify(error));
   return data as Creator;
 }
 
@@ -61,13 +61,13 @@ export async function updateCreator(creator: Creator): Promise<Creator> {
     .eq("id", creator.id)
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(error.message ?? JSON.stringify(error));
   return data as Creator;
 }
 
 export async function deleteCreator(id: string): Promise<void> {
   const { error } = await getSupabase().from("creators").delete().eq("id", id);
-  if (error) throw error;
+  if (error) throw new Error(error.message ?? JSON.stringify(error));
 }
 
 // ── Videos ───────────────────────────────────────────────────────────────────
@@ -77,14 +77,14 @@ export async function getVideos(filters?: { configName?: string; creator?: strin
   if (filters?.configName) query = query.eq("configName", filters.configName);
   if (filters?.creator) query = query.eq("creator", filters.creator);
   const { data, error } = await query.order("dateAdded", { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(error.message ?? JSON.stringify(error));
   return data as Video[];
 }
 
 export async function insertVideos(videos: Video[]): Promise<void> {
   if (videos.length === 0) return;
   const { error } = await getSupabase().from("videos").insert(videos);
-  if (error) throw error;
+  if (error) throw new Error(error.message ?? JSON.stringify(error));
 }
 
 export async function updateVideoStarred(id: string, starred: boolean): Promise<Video> {
@@ -94,6 +94,6 @@ export async function updateVideoStarred(id: string, starred: boolean): Promise<
     .eq("id", id)
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(error.message ?? JSON.stringify(error));
   return data as Video;
 }
