@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, useRef, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { useRealtimeRun } from "@trigger.dev/react-hooks";
 import type { PipelineProgress } from "@/lib/types";
 
 interface PipelineContextValue {
@@ -11,65 +12,58 @@ interface PipelineContextValue {
 
 const PipelineContext = createContext<PipelineContextValue | null>(null);
 
+const TERMINAL_STATUSES = new Set(["COMPLETED", "FAILED", "CANCELED", "CRASHED", "TIMED_OUT"]);
+
 export function PipelineProvider({ children }: { children: React.ReactNode }) {
   const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState<PipelineProgress | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const [runId, setRunId] = useState<string | undefined>(undefined);
+  const [publicToken, setPublicToken] = useState<string | undefined>(undefined);
 
-  const runPipeline = useCallback(async (params: { configName: string; maxVideos: number; topK: number; nDays: number }) => {
-    if (running) return;
-    setRunning(true);
-    setProgress(null);
+  const { run } = useRealtimeRun(runId, {
+    accessToken: publicToken,
+    enabled: !!runId && !!publicToken,
+  });
 
-    abortRef.current = new AbortController();
-
-    try {
-      const response = await fetch("/api/pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params),
-        signal: abortRef.current.signal,
-      });
-
-      const reader = response.body?.getReader();
-      if (!reader) return;
-
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              setProgress(data);
-            } catch {
-              // skip
-            }
-          }
-        }
-      }
-    } catch (err) {
-      if ((err as Error).name === "AbortError") return;
-      setProgress((prev) => ({
-        ...(prev || { phase: "done" as const, activeTasks: [], creatorsCompleted: 0, creatorsTotal: 0, creatorsScraped: 0, videosAnalyzed: 0, videosTotal: 0, log: [] }),
-        status: "error" as const,
-        errors: [err instanceof Error ? err.message : "Unknown error"],
-      }));
-    } finally {
+  // Stop the local "running" spinner once the task reaches a terminal state
+  useEffect(() => {
+    if (run?.status && TERMINAL_STATUSES.has(run.status)) {
       setRunning(false);
     }
-  }, [running]);
+  }, [run?.status]);
+
+  const progress = (run?.metadata?.progress as PipelineProgress) ?? null;
+
+  const isRunning = running || run?.status === "EXECUTING" || run?.status === "QUEUED";
+
+  const runPipeline = useCallback(
+    async (params: { configName: string; maxVideos: number; topK: number; nDays: number }) => {
+      if (isRunning) return;
+      setRunning(true);
+      setRunId(undefined);
+      setPublicToken(undefined);
+
+      try {
+        const response = await fetch("/api/pipeline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(params),
+        });
+
+        if (!response.ok) throw new Error(`Failed to start pipeline: ${response.status}`);
+
+        const data = await response.json();
+        setRunId(data.runId);
+        setPublicToken(data.publicToken);
+      } catch (err) {
+        setRunning(false);
+        console.error("Pipeline trigger failed:", err);
+      }
+    },
+    [isRunning]
+  );
 
   return (
-    <PipelineContext.Provider value={{ running, progress, runPipeline }}>
+    <PipelineContext.Provider value={{ running: isRunning, progress, runPipeline }}>
       {children}
     </PipelineContext.Provider>
   );
