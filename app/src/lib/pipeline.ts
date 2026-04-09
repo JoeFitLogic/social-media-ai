@@ -228,7 +228,7 @@ export async function runPipeline(
     emit();
   } catch (err) {
     progress.status = "error";
-    const msg = `Pipeline error: ${err instanceof Error ? err.message : err}`;
+    const msg = `Pipeline error: ${err instanceof Error ? err.message : typeof err === "object" ? JSON.stringify(err) : String(err)}`;
     progress.errors.push(msg);
     log(msg);
     emit();
