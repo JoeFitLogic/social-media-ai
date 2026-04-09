@@ -41,14 +41,13 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-white/[0.06]">
       <SidebarHeader className="px-5 py-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 glow-sm">
-            <Film className="h-4 w-4 text-white" />
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold tracking-tight">Virality System</h1>
-            <p className="text-[11px] text-muted-foreground">Instagram Reels AI</p>
-          </div>
+        <div className="flex flex-col gap-2">
+          <img
+            src="https://assets.cdn.filesafe.space/Evr1MAVgkA3M5UKIH3dK/media/66df41d80b37b2003c3d1628.webp"
+            alt="7FSS Virality System"
+            className="h-10 w-auto object-contain"
+          />
+          <p className="text-[11px] text-muted-foreground pl-0.5">Instagram Reels AI</p>
         </div>
       </SidebarHeader>
       <SidebarContent className="px-3">
@@ -62,7 +61,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className="h-10 rounded-xl px-3 transition-all duration-200"
+                      className="h-10 rounded-xl px-3 transition-all duration-200 data-[active=true]:text-[oklch(0.72_0.13_82)]"
                     >
                       <Link href={item.href}>
                         <item.icon className="h-4 w-4" />
