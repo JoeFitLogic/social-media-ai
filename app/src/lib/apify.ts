@@ -89,10 +89,18 @@ export async function scrapeCreatorStats(username: string): Promise<CreatorStats
   const profileData = await profileRes.json() as ApifyProfileResult[];
   const profile = profileData[0] || {};
 
+  // Scrape last 30 days of reels to calculate reelsCount30d and avgViews30d
+  const reels = await scrapeReels(username, 50, 30);
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const reels30d = reels.filter((r) => r.timestamp && new Date(r.timestamp) >= cutoff);
+  const avgViews30d = reels30d.length > 0
+    ? Math.round(reels30d.reduce((sum, r) => sum + (r.videoPlayCount || 0), 0) / reels30d.length)
+    : 0;
+
   return {
     profilePicUrl: profile.profilePicUrl || "",
     followers: profile.followersCount || 0,
-    reelsCount30d: 0,
-    avgViews30d: 0,
+    reelsCount30d: reels30d.length,
+    avgViews30d,
   };
 }
