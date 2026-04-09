@@ -163,7 +163,10 @@ export const pipelineTask = task({
           progress.videosAnalyzed++;
           log(`@${result.output.creator} (${result.output.views.toLocaleString()} views): done`);
         } else {
-          const msg = `Video analysis failed: ${result.ok === false ? JSON.stringify(result.error) : "no output"}`;
+          const errMsg = result.ok === false
+            ? (result.error instanceof Error ? result.error.message : result.error?.message ?? JSON.stringify(result.error))
+            : "no output";
+          const msg = `Video analysis failed: ${errMsg}`;
           progress.errors.push(msg);
           log(`Error — ${msg}`);
         }
