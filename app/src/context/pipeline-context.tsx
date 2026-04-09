@@ -31,7 +31,7 @@ export function PipelineProvider({ children }: { children: React.ReactNode }) {
     }
   }, [run?.status]);
 
-  const progress = (run?.metadata?.progress as PipelineProgress) ?? null;
+  const progress = (run?.metadata?.progress as unknown as PipelineProgress) ?? null;
 
   const isRunning = running || run?.status === "EXECUTING" || run?.status === "QUEUED";
 
