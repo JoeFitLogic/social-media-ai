@@ -162,12 +162,19 @@ function VideosContent() {
                       src={`/api/proxy-image?url=${encodeURIComponent(video.thumbnail)}`}
                       alt={`@${video.creator}`}
                       className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        target.style.display = "none";
+                        target.nextElementSibling?.removeAttribute("hidden");
+                      }}
                     />
-                  ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <Film className="h-10 w-10 text-muted-foreground/20" />
-                    </div>
-                  )}
+                  ) : null}
+                  <div
+                    className="flex h-full items-center justify-center"
+                    hidden={!!video.thumbnail}
+                  >
+                    <Film className="h-10 w-10 text-muted-foreground/20" />
+                  </div>
                   {/* Views overlay — Instagram style */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent pt-8 pb-2.5 px-3">
                     <div className="flex items-center gap-1.5">
