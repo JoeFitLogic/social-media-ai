@@ -1,47 +1,58 @@
-import { NextResponse } from "next/server";
-import { v4 as uuid } from "uuid";
-import { getCreators, insertCreator, updateCreator, deleteCreator } from "@/lib/db";
-import type { Creator } from "@/lib/types";
+import { getCreators, updateCreator } from '@/lib/db'
+import { scrapeCreatorStats } from '@/lib/apify'
+import { CORS_HEADERS, handleOptions } from '../cors'
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const category = searchParams.get("category") ?? undefined;
-  const creators = await getCreators(category);
-  return NextResponse.json(creators);
-}
+export const maxDuration = 300
+
+export async function OPTIONS() { return handleOptions() }
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const body = await request.json()
+  const ids: string[] = body.ids || []
+  const allCreators = await getCreators()
+  const toRefresh = ids.length > 0
+    ? allCreators.filter(c => ids.includes(c.id))
+    : allCreators
 
-  const newCreator: Creator = {
-    id: uuid(),
-    username: body.username,
-    category: body.category,
-    profilePicUrl: "",
-    followers: 0,
-    reelsCount30d: 0,
-    avgViews30d: 0,
-    lastScrapedAt: "",
-  };
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    async start(controller) {
+      for (const creator of toRefresh) {
+        try {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: 'progress', username: creator.username, status: 'scraping' })}\n\n`)
+          )
+          const stats = await scrapeCreatorStats(creator.username)
+          await updateCreator({
+            ...creator,
+            profilePicUrl: stats.profilePicUrl,
+            followers: stats.followers,
+            reelsCount30d: stats.reelsCount30d,
+            avgViews30d: stats.avgViews30d,
+            lastScrapedAt: new Date().toISOString(),
+          })
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: 'progress', username: creator.username, status: 'done', stats })}\n\n`)
+          )
+        } catch (err) {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: 'error', username: creator.username, error: err instanceof Error ? err.message : 'Unknown' })}\n\n`)
+          )
+        }
+      }
+      controller.enqueue(
+        encoder.encode(`data: ${JSON.stringify({ type: 'complete' })}\n\n`)
+      )
+      controller.close()
+    },
+  })
 
-  const created = await insertCreator(newCreator);
-  return NextResponse.json(created, { status: 201 });
-}
-
-export async function PUT(request: Request) {
-  const body = await request.json();
-  try {
-    const updated = await updateCreator(body);
-    return NextResponse.json(updated);
-  } catch {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-}
-
-export async function DELETE(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-  await deleteCreator(id);
-  return NextResponse.json({ success: true });
+  return new Response(stream, {
+    headers: {
+      ...CORS_HEADERS,
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
 }
