@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { readVideos } from '@/lib/csv'
+import { getVideos } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
   const secret = req.headers.get('x-api-secret')
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get('limit') || '20')
 
   try {
-    const videos = await readVideos()
+    const videos = await getVideos()
 
     const recent = videos
       .filter(v => v.analysis)
