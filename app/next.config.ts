@@ -1,13 +1,18 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "**.cdninstagram.com" },
-      { protocol: "https", hostname: "**.fbcdn.net" },
-      { protocol: "https", hostname: "scontent.cdninstagram.com" },
-    ],
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,PATCH,DELETE,OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type,x-api-secret,x-user-id' },
+        ],
+      },
+    ]
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig
