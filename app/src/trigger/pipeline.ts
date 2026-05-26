@@ -6,8 +6,6 @@ import { uploadVideo, analyzeVideo } from "@/lib/gemini";
 import { generateNewConcepts } from "@/lib/claude";
 import type { PipelineParams, PipelineProgress, Video } from "@/lib/types";
 
-// ── Child task: analyze a single video ───────────────────────────────────────
-
 interface AnalyzeVideoPayload {
   videoUrl: string;
   postUrl: string;
@@ -24,7 +22,7 @@ interface AnalyzeVideoPayload {
 
 export const analyzeVideoTask = task({
   id: "analyze-video",
-  maxDuration: 540, // 9 minutes — one video well within free tier limit
+  maxDuration: 540,
   run: async (payload: AnalyzeVideoPayload): Promise<Video | null> => {
     const videoResponse = await fetch(payload.videoUrl);
     if (!videoResponse.ok) throw new Error(`Download failed: ${videoResponse.status}`);
@@ -53,11 +51,9 @@ export const analyzeVideoTask = task({
   },
 });
 
-// ── Parent task: scrape + orchestrate child tasks ─────────────────────────────
-
 export const pipelineTask = task({
   id: "run-pipeline",
-  maxDuration: 540, // 9 minutes for scraping + orchestration
+  maxDuration: 540,
   run: async (payload: PipelineParams) => {
     const progress: PipelineProgress = {
       status: "running",
@@ -73,7 +69,6 @@ export const pipelineTask = task({
     };
 
     const emit = () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       metadata.set("progress", JSON.parse(JSON.stringify(progress)) as any);
     };
 
@@ -89,9 +84,9 @@ export const pipelineTask = task({
       if (!config) throw new Error(`Config "${payload.configName}" not found`);
       log(`Loaded config: ${config.configName}`);
 
-      // Load creators
-      const creators = await getCreators(config.creatorsCategory);
-      if (creators.length === 0) throw new Error(`No creators found for category "${config.creatorsCategory}"`);
+      // Load ALL creators — no category filtering
+      const creators = await getCreators();
+      if (creators.length === 0) throw new Error(`No creators found. Please add creators first.`);
       progress.creatorsTotal = creators.length;
       log(`Found ${creators.length} creators — scraping all in parallel`);
       emit();
@@ -163,7 +158,6 @@ export const pipelineTask = task({
           progress.videosAnalyzed++;
           log(`@${result.output.creator} (${result.output.views.toLocaleString()} views): done`);
         } else {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const errMsg = result.ok === false ? String((result.error as any)?.message ?? JSON.stringify(result.error)) : "no output";
           const msg = `Video analysis failed: ${errMsg}`;
           progress.errors.push(msg);
