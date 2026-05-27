@@ -108,7 +108,7 @@ export const pipelineTask = task({
               likes: r.likesCount || 0,
               comments: r.commentsCount || 0,
               username: r.ownerUsername || creator.username,
-              thumbnail: r.images?.[0] || "",
+              thumbnail: r.displayUrl || r.thumbnailUrl || r.images?.[0] || r.previewUrl || "",
               datePosted: r.timestamp?.split("T")[0] || "",
               timestamp: new Date(r.timestamp),
               analysisInstruction: config.analysisInstruction,
